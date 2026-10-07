@@ -1,0 +1,5 @@
+|!Run file for !Hotspot
+Set Hotspot$Dir <Obey$Dir>
+IconSprites <Hotspot$Dir>.!Sprites
+WimpSlot -min 4096K -max 4096K
+Run <Hotspot$Dir>.!RunImage

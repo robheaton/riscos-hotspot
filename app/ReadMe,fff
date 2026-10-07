@@ -1,0 +1,91 @@
+Hotspot 0.05 - test against the real hotspot
+============================================
+
+Hotspot is a desktop controller for a WPSD hotspot. It uses the hotspot's
+own web dashboard, so nothing is installed on the hotspot. It starts out
+set to your hotspot's address, 10.0.0.27, and is aimed at the three things
+you use: BrandMeister DMR, TGIF DMR and YSF.
+
+Step by step
+------------
+1. Put the program on a local disc.
+   Copy the !Hotspot folder from this folder (Development/Hotspot on the
+   NAS) onto a local disc, or unzip Hotspot-0.05.zip there. Run it from the
+   local copy, not from the share.
+
+2. Start it.
+   Double-click !Hotspot. The Hotspot icon appears on the icon bar, the
+   main window opens and, because it is the first run, so does the
+   "Hotspot choices" window.
+
+3. Fill in the Choices window.
+   Hotspot address ..... 10.0.0.27 (already there)
+   Port ................ 80
+   User name ........... pi-star
+   Password ............ type the hotspot's Admin password
+   Click Save. (Tab, or Return, moves from box to box; Return in the last
+   box also saves.)
+
+4. Look at the Status tab (within a few seconds).
+   Expect "Connected." in green, then: the Radio section (IDLE, 438.780 MHz
+   transmit, the modem type), Modes Enabled with DMR and YSF each having a
+   Pause button, the DMR masters (BM 2341 United Kingdom, TGIF Network),
+   YSF Status with "Link  GB-NWFG2", and the hardware figures at the end.
+   If it says "Not connected" go to step 11.
+
+5. Click the Heard tab.
+   The last heard list. When someone is transmitting, their row turns green
+   (it updates every few seconds).
+
+6. Click the DMR tab.
+   DMR networks: BM 2341 United Kingdom and TGIF Network, each with a
+   Disable button. BrandMeister: the static talkgroups with Link/Drop/Delete
+   buttons, Add TG..., and Drop QSO / Drop dynamic. TGIF: a row to link and
+   unlink a talkgroup (it may say "current links not shown": see below).
+   Try, one at a time, and watch the "Last action" line under the title:
+   - Disable beside TGIF Network, wait about five seconds, then Enable.
+   - Link or Drop a BrandMeister talkgroup you do not mind changing.
+   - Link... on the TGIF row, type a talkgroup, click Link.
+
+7. Click the Links tab.
+   YSF reflector: "linked to GB-NWFG2" with Link... and Unlink buttons.
+   Click Link..., type a YSF reflector number (for example 00001) and click
+   Link. After a few seconds the row shows the new link and a "Recent YSF
+   reflectors" row appears under it with a button for it: clicking that
+   button links the same reflector again in one go. Put GB-NWFG2 back with
+   Link... when finished.
+
+8. Try Pause and Resume on the Status tab (Pause beside DMR or YSF; the
+   button turns into Resume).
+
+9. Press the Menu button over the window: Refresh, Modes, DMR, Links,
+   System, View, Find hotspot..., Save diagnostics, Choices.
+
+10. Press the Menu button over the icon bar icon: Info, Find hotspot...,
+    Choices..., Quit (clicking the icon itself opens the window). Move the
+    pointer onto the arrow beside Info: the "Program information" window
+    opens beside the menu (Name, Purpose, Author, Version), as in other
+    programs, and goes away with the menu.
+
+11. If the hotspot's address ever changes.
+    Click Find hotspot... (beside the "Not connected" message, in the
+    window, or in either menu). The box starts with 10.0.0. - check it is
+    the first three numbers of your network's addresses and click Search.
+    After a few seconds each hotspot found is offered: "Found a hotspot at
+    10.0.0.27 ... Use this address?" - click Continue. (If it finds the address
+    you are already using it says so.) You can also just change the address
+    in Choices.
+
+12. If anything looks wrong, open the System tab and click Save beside
+    "Save diagnostics report": the box tells you where the file is.
+    Send it (or describe what you saw). The report holds what the hotspot
+    answered to each request, never the password.
+
+Notes
+-----
+* Looking at the hotspot needs no password; anything that changes it, and
+  the DMR network and BrandMeister lists, use the Admin login.
+* Your own settings are saved in your Choices directory and used instead of
+  the ones shipped in the application.
+* A fixed address for the hotspot in your router (a DHCP reservation) stops
+  the address ever moving.

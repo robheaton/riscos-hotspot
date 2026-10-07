@@ -1,0 +1,14 @@
+# >Choices for Hotspot
+#
+# The settings the program starts with. Your own changes (made with the
+# Choices... button) are saved in your Choices directory and used instead.
+#
+# The usual address of the hotspot's WPSD dashboard. If it moves, the Find
+# hotspot... button searches the network for it.
+Host=10.0.0.27
+Port=80
+User=pi-star
+Refresh=5
+HeardRows=15
+ShowBM=1
+Names=0

@@ -1,0 +1,51 @@
+Hotspot - a desktop controller for WPSD hotspots
+================================================
+
+Hotspot lets you watch and control a digital voice hotspot running WPSD
+(the Pi-Star successor) from the RISC OS desktop. It talks to the hotspot's
+own web dashboard over your network; nothing is installed on the hotspot.
+
+Getting started
+---------------
+1. Double-click !Hotspot. An icon appears on the icon bar.
+2. Click it (Select) to open the window. The first time, the Choices window
+   opens: check the hotspot's IP address (10.0.0.27 to begin with), and type
+   the password for its Admin pages (the user name is normally pi-star).
+   Click Save. Tab, or Return, moves from one box to the next.
+3. The window fills in. The tabs along the top switch between:
+
+     Status   radio state, modes and networks, with Pause/Resume buttons
+     Heard    the last heard list; a live transmission is highlighted
+     DMR      switch DMR networks (BrandMeister, TGIF) on and off, manage
+              BrandMeister talkgroups, link TGIF talkgroups
+     Links    link or unlink YSF, D-Star, P25, NXDN reflectors/talkgroups;
+              the last few you used are one click away
+     System   restart services, update host files, reboot, shut down
+
+The Menu button over the window gives the same actions as a menu; the Menu
+button over the icon bar icon gives Info (move the pointer onto its arrow for
+the Program information window), Find hotspot, Choices and Quit. (Clicking the
+icon bar icon opens the window.)
+F5 refreshes (click in the window first so it receives the key).
+
+If the hotspot's address changes
+--------------------------------
+The address can change when the router hands out a new one. Click Find
+hotspot... (in the window, either menu, or beside the "Not connected"
+message), check the first three numbers of your network's addresses, and
+click Search. Every address from 1 to 254 is tried. Each hotspot found is
+offered to you: click Continue to use it. Choices has the address too, to type in.
+Giving the hotspot a fixed address in your router avoids all this.
+
+What needs a login
+------------------
+Looking is free: the status, last heard and radio information are public on
+the dashboard. Everything that changes something (and the DMR network and
+BrandMeister lists) uses the Admin login you entered in Choices. If the
+login is wrong the window says so.
+
+If something does not work
+--------------------------
+System > Save diagnostics writes a report (what was asked of the hotspot and
+what it answered, without the password) next to the Choices file. Send that
+report along with a description of what you expected.
