@@ -59,7 +59,7 @@ $(APP)/!Sprites,ff9: tools/mksprites.py
 # Hotspot-<version>.zip: the application folder and the ReadMe, with the file
 # types in the zip's RISC OS ("ARC0") extra fields, as RISC OS zip tools do.
 dist: app
-	python3 tools/mkdist.py $(ZIP) app/'ReadMe,fff'
+	python3 tools/mkdist.py $(ZIP) app/'ReadMe,fff' LICENSE
 	@echo "version $(VERSION)"
 
 # The files that are written by hand live in app/!Hotspot with RISC OS file

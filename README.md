@@ -230,3 +230,14 @@ WPSD *profiles* (switch the whole configuration: `POST /admin/profile_manager.ph
 with `configs=<name>&restore_config=…`), a picker for the YSF reflector list,
 XLX module switching, TLS (AcornSSL is already proven in `ssl-test`), a
 "live caller" iconbar indicator.
+
+## Licence
+
+[BSD Zero Clause (0BSD)](LICENSE): use it, copy it, change it and share it for
+any purpose, with no conditions - not even keeping a copyright notice.
+
+[WPSD](https://wpsd.radio) is a separate project with its own licence
+(GPL-3.0). This program does not contain or link any of its code: it only
+talks to the hotspot's web pages over the network. `test/mock_wpsd.py` is a
+stand-in hotspot that imitates the HTML those pages produce, so the parsers
+can be tested without one; it contains none of WPSD's PHP.

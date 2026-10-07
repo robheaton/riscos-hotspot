@@ -2,7 +2,7 @@
 """
 mkdist.py - zips the built application the way zip tools on RISC OS do.
 
-    mkdist.py OUTPUT.zip [README]
+    mkdist.py OUTPUT.zip [README [LICENCE]]
 
 Names in the zip are plain ("!Run", not "!Run,feb"). What RISC OS needs to
 know about each file - its file type, load and exec addresses, attributes -
@@ -13,7 +13,8 @@ fields, stored directory entries, time stamps in centiseconds since 1900).
 
 Files in the build directory carry their type as a ",xxx" suffix (the way an
 SMB share shows it); one without a suffix is taken to be Text. The optional
-README is put beside the application folder, at the top of the zip.
+README, and the LICENCE file if one is given (it goes in as "Licence"), are put
+beside the application folder, at the top of the zip.
 
 Python's zipfile only, no zip(1).
 """
@@ -63,11 +64,12 @@ def entry(name, filetype, is_dir, now):
 
 
 def main():
-    if len(sys.argv) not in (2, 3):
-        sys.exit("usage: mkdist.py OUTPUT.zip [README]")
+    if len(sys.argv) not in (2, 3, 4):
+        sys.exit("usage: mkdist.py OUTPUT.zip [README [LICENCE]]")
 
     out = sys.argv[1]
-    readme = sys.argv[2] if len(sys.argv) == 3 else None
+    readme = sys.argv[2] if len(sys.argv) >= 3 else None
+    licence = sys.argv[3] if len(sys.argv) == 4 else None
     src = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "..", "build", "riscos", "!Hotspot"))
     now = time.time()
@@ -77,6 +79,10 @@ def main():
             name, filetype = split_type(os.path.basename(readme))
             with open(readme, "rb") as f:
                 z.writestr(entry(name, filetype, False, now), f.read())
+
+        if licence is not None:
+            with open(licence, "rb") as f:
+                z.writestr(entry("Licence", 0xFFF, False, now), f.read())
 
         z.writestr(entry("!Hotspot/", 0xFFD, True, now), b"")
         for fname in sorted(os.listdir(src)):
