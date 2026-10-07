@@ -117,6 +117,22 @@ static int mock_log_contains(const char *needle)
     return found;
 }
 
+/* How many times `needle` appears in the mock hotspot's log. */
+static int mock_log_count(const char *needle)
+{
+    char *log = simple_get("/__mock/log");
+    const char *p = log;
+    int n = 0;
+
+    while ((p = strstr(p, needle)) != NULL) {
+        n++;
+        p += strlen(needle);
+    }
+
+    free(log);
+    return n;
+}
+
 /* ------------------------------------------------------------------ */
 
 static int all_but_status(const hs_model *m)
@@ -706,6 +722,8 @@ static void scenario_focus(void)
     CHECK(mock_log_contains("/api/?limit="));
     CHECK(!mock_log_contains("func=dmr_man"));
 
+    CHECK(!mock_log_contains("func=ysf_man"));
+
     /* And the DMR tab brings the big network page, and BrandMeister. */
     free(simple_get("/__mock/reset"));
     hs_set_focus(hs, HS_R_BM | HS_R_TGIF | HS_R_DMRNET);
@@ -715,6 +733,114 @@ static void scenario_focus(void)
     CHECK(mock_log_contains("tgif_links.php"));
     CHECK(m->dmrnet_state == -1);       /* this mock hotspot has no gateway */
     CHECK(m->tgif_state == -1);         /* nor TGIF */
+
+    hs_free(hs);
+}
+
+static int ysf_ready(const hs_model *m)
+{
+    return m->ysf_state == 1;
+}
+
+static int ysf_refused(const hs_model *m)
+{
+    return m->ysf_state == -2;
+}
+
+/* The YSF tab: the reflector list comes from the YSF Link Manager page, read
+ * when the tab comes up and again on a refresh - not on every poll. */
+static void scenario_ysf_list(void)
+{
+    hs_config cfg = base_config();
+    hs_client *hs;
+    const hs_model *m;
+    hs_action a;
+    char lines[8][112];
+    int n;
+    int i;
+    int found = 0;
+
+    printf("-- the YSF reflector list\n");
+    cfg.refresh_s = 2;
+    hs = hs_new(&cfg);
+    m = hs_get(hs);
+    free(simple_get("/__mock/reset"));
+
+    hs_set_polling(hs, 1, http_clock_cs());
+    hs_set_focus(hs, HS_R_YSF);
+    CHECK(pump(hs, ysf_ready, 10.0));
+    CHECK(m->ysf.n == 353);
+    CHECK(strcmp(m->ysf.e[0].value, "YSF00001") == 0);
+    CHECK(strcmp(m->ysf.e[0].text, "Parrot") == 0);
+
+    n = hs_request_summary(hs, lines, 8);
+    for (i = 0; i < n; i++) {
+        if (strstr(lines[i], "YSF reflectors: HTTP 200") != NULL &&
+            strstr(lines[i], "353 reflectors") != NULL)
+            found = 1;
+    }
+    CHECK(found);
+
+    /* The diagnostics keep the part of this big page that matters (the list),
+     * not its first 24 KB of style sheet. */
+    {
+        FILE *f = tmpfile();
+        char *text;
+        long size;
+
+        CHECK(f != NULL);
+        if (f != NULL) {
+            hs_write_diagnostics(hs, f);
+            size = ftell(f);
+            rewind(f);
+            text = (char *)malloc((size_t)size + 1);
+            CHECK(text != NULL && fread(text, 1, (size_t)size, f) == (size_t)size);
+            if (text != NULL) {
+                text[size] = '\0';
+                CHECK(strstr(text, "name=\"ysfLinkHost\"") != NULL);
+                CHECK(strstr(text, "the part from byte") != NULL);
+                CHECK(strstr(text, "YSF00001 - Parrot") != NULL);
+                CHECK(strstr(text, "raspberry") == NULL);
+                free(text);
+            }
+            fclose(f);
+        }
+    }
+
+    /* Read once; several polls later it has not been read again... */
+    pump_for(hs, 5.0);
+    CHECK(mock_log_count("func=ysf_man") == 1);
+
+    /* ... until a refresh asks. */
+    hs_refresh(hs, HS_R_YSF);
+    CHECK(pump(hs, NULL, 10.0));
+    CHECK(mock_log_count("func=ysf_man") == 2);
+    CHECK(m->ysf_state == 1 && m->ysf.n == 353);
+
+    /* Linking one of the listed reflectors. */
+    memset(&a, 0, sizeof a);
+    a.kind = HS_ACT_YSF;
+    u_copy(a.s1, sizeof a.s1, m->ysf.e[5].value);       /* YSF00011 */
+    u_copy(a.label, sizeof a.label, "Link YSF");
+    a.i3 = 1;
+    CHECK(hs_do(hs, &a) == 0);
+    CHECK(pump(hs, NULL, 10.0));
+    CHECK(m->act_ok);
+    CHECK(mock_log_contains("ysfLinkHost=YSF00011&Link=LINK"));
+
+    /* A refused login leaves no list behind. */
+    {
+        hs_config bad = base_config();
+
+        u_copy(bad.pass, sizeof bad.pass, "not the password");
+        bad.refresh_s = 2;
+        hs_set_config(hs, &bad);
+        CHECK(m->ysf.e == NULL && m->ysf_state == 0);   /* another login: start again */
+
+        hs_refresh(hs, HS_R_YSF);
+        CHECK(pump(hs, ysf_refused, 10.0));
+        CHECK(m->ysf.n == 0 && m->ysf.e == NULL);
+    }
 
     hs_free(hs);
 }
@@ -1103,6 +1229,7 @@ int main(int argc, char **argv)
         scenario_legacy();
         scenario_tgif_and_networks();
         scenario_control_chars();
+        scenario_ysf_list();
         scenario_focus();
         scenario_scan(g_second);
         scenario_diagnostics();

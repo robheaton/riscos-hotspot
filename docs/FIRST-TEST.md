@@ -1,4 +1,4 @@
-# First test on the RISC OS machine (Hotspot 0.05)
+# First test on the RISC OS machine (Hotspot 0.06)
 
 Everything below is what to do the first time, step by step. The program has
 never run on real RISC OS yet — only against a mock hotspot and a fake desktop
@@ -23,7 +23,7 @@ application on the NAS.
 
 1. Copy the whole `!Hotspot` folder to a local disc on the RISC OS machine
    (it is on the NAS in `Development/Hotspot/!Hotspot`; the zip
-   `Hotspot-0.05.zip` beside it holds the same). Run it from the local copy.
+   `Hotspot-0.06.zip` beside it holds the same). Run it from the local copy.
 2. Open the folder in the Filer. `!Hotspot` should show a blue radio-mast
    icon (if it shows a plain application icon, note that — it means
    `!Sprites` was not picked up).
@@ -44,7 +44,7 @@ application on the NAS.
    GB-NWFG2), and *Hotspot* (CPU load, temperature…). The buttons are against
    the right-hand edge of the window, visible without scrolling.
    *If it says "Not connected to 10.0.0.27: …", write down the message and try
-   step 11. If it says Connected but a list is empty, go to "If something is
+   step 12. If it says Connected but a list is empty, go to "If something is
    empty" below.*
 6. Click the **Heard** tab: the last heard list appears (UTC time, callsign,
    mode, target). When anyone is transmitting the top row turns green and says
@@ -67,15 +67,24 @@ application on the NAS.
    seconds the row shows the new link and a *Recent YSF reflectors* row appears
    with a button for it (click it: the same reflector is linked again in one
    go). Put GB-NWFG2 back with Link… when you have finished.
-9. Back on **Status**, click **Pause** next to DMR or YSF; the button should
+9. Click the **YSF** tab. This is the hotspot's own list of YSF reflectors and
+   FCS rooms (read from the hotspot when the tab comes up, so it needs the
+   Admin login). At the top: what YSF is linked to now, **Number…** (type one,
+   as on the Links tab), **Unlink**, and the ones you linked recently. Click
+   **Search…**, type part of a name, number or place (such as `calling`,
+   `italy` or `00010`) and click Search: the list narrows to what matches, and
+   **Show all** brings the rest back. Click **Link** beside a reflector: after
+   a few seconds *Linked to* shows it and it appears under *Recently linked*.
+   Put GB-NWFG2 back when you have finished.
+10. Back on **Status**, click **Pause** next to DMR or YSF; the button should
    turn into **Resume** and *Last action - Pause …* should appear. Click
    **Resume**.
-10. Press the **Menu** mouse button over the window (Refresh, Modes, DMR, Links,
+11. Press the **Menu** mouse button over the window (Refresh, Modes, DMR, Links,
     System, View, Find hotspot…, Save diagnostics, Choices…) and over the icon
     bar icon (Info, Help…, Find hotspot…, Choices…, Quit; clicking the icon itself opens the window; Help… opens the help file in your editor) and check they
     open and do what they say. Move the pointer onto the arrow beside Info: the
     Program information window opens beside the menu, as in other programs. After clicking in the window, **F5** refreshes.
-11. **If the hotspot's address changes**, or to try it: click **Find
+12. **If the hotspot's address changes**, or to try it: click **Find
     hotspot…**. The box starts with `10.0.0.`; click **Search**. After a few
     seconds, a hotspot found at the address already in use is reported as
     such; one found elsewhere is offered ("Found a hotspot at … Use this
@@ -83,13 +92,13 @@ application on the NAS.
     in **Choices…** to a wrong one (say 10.0.0.99), Save, wait for "Not
     connected to 10.0.0.99", click the **Find hotspot…** button beside it,
     Search, and click Continue when it offers 10.0.0.27.
-12. **System** tab → **Save**: a box says where the diagnostics report was
+13. **System** tab → **Save**: a box says where the diagnostics report was
     saved (in your Choices folder, file `Diagnostics`). Copy that file to the
     NAS.
 
 ## If something is empty or wrong
 
-The **Diagnostics** file (step 12) contains, for every request the program
+The **Diagnostics** file (step 13) contains, for every request the program
 makes, the URL, HTTP status, headers, and the first 24 KB of the reply — with
 the password left out. Send it back with a note of *which* part of the window
 was wrong, and the parsers can be fixed against the real thing.

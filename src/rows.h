@@ -19,6 +19,7 @@ typedef enum {
     VIEW_STATUS = 0,
     VIEW_HEARD,
     VIEW_DMR,           /* DMR networks, BrandMeister, TGIF */
+    VIEW_YSF,           /* the YSF reflector list, to search and link from */
     VIEW_LINKS,         /* YSF, D-Star, P25, NXDN reflectors and talkgroups */
     VIEW_SYSTEM,
     VIEW_COUNT
@@ -60,6 +61,8 @@ typedef enum {
     UA_LINK,            /* a[0] = ui_proto, a[1] = 1 link / 0 unlink,
                          * a[2] = TGIF timeslot (0 = ask / default) */
     UA_LINK_TO,         /* a[0] = ui_proto, arg = a recently used target */
+    UA_YSF_SEARCH,      /* ask for the text to narrow the reflector list by */
+    UA_YSF_CLEAR,       /* show every reflector again */
     UA_SYS,             /* arg = system_api action, label = what to confirm */
     UA_DIAG,
     UA_HELP,            /* open the !Help file */
@@ -81,7 +84,7 @@ typedef struct {
     char          label[24];
 } ui_btn;
 
-#define UI_MAX_BTN 5
+#define UI_MAX_BTN 6
 #define UI_MAX_ROWS 400     /* a safety cap on any one list */
 
 /* A value longer than this (a hardware description, say) is carried on in
@@ -117,6 +120,14 @@ const char *ui_view_name(ui_view v);
 
 /* What the tab for `view` needs the client to keep fresh (HS_R_*). */
 unsigned ui_view_focus(ui_view v);
+
+/* The text the YSF tab narrows its list of reflectors by (empty: all of
+ * them). Part of a number, a name or a place, in any case. */
+void ui_set_ysf_filter(const char *text);
+const char *ui_ysf_filter(void);
+
+/* How many reflectors of the list the text matches (all of them if empty). */
+int ui_ysf_matches(const hs_model *m, const char *filter);
 
 /* The timeslots the DMR status page says are in use: bit 0 = slot 1, bit 1 =
  * slot 2. Both when it does not say. */

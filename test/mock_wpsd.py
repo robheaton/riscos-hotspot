@@ -421,6 +421,60 @@ def page_dmr_man(h):
     return wrap_admin_page("\n".join(o), h)
 
 
+def php_escape(text):
+    """htmlspecialchars() as PHP does it (quotes included)."""
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;").replace("'", "&#039;"))
+
+
+def ysf_hosts():
+    """The reflectors as YSFHosts.txt and FCSHosts.txt would list them: (id,
+    name, description) - a few real-looking ones, then enough generated ones
+    that the list is long, as the real one is (several hundred)."""
+    named = [("UK-Calling", "United Kingdom"), ("UK-Wide", "United Kingdom"),
+             ("CQ-Italia", "Italy"), ("DL-Nordrhein", "Germany"),
+             ("Friends & Family Net", "Ham & Co"), ("O'Brien's Net", "Ireland"),
+             ("A-Rather-Long-Reflector-Name-That-Goes-On", "A long description"),
+             ("Eastern-Europe", "Romania Hungary Slovenia"), ("NWFG-2", "North West Fusion Group")]
+    out = [("00001", "Parrot", None), ("00002", "Link YSF2DMR", None),
+           ("00003", "Link YSF2NXDN", None), ("00004", "Link YSF2P25", None)]
+    for i, (name, desc) in enumerate(named):
+        out.append(("%05d" % (10 + i), name, desc))
+    for i in range(300):
+        out.append(("%05d" % (100 + i), "Room-%03d" % i, "Generated reflector number %d" % i))
+    for i in range(40):
+        out.append(("FCS%05d" % (i + 1), "FCS room %d" % (i + 1), None))
+    return out
+
+
+def page_ysf_man(h, limit=None, wrap=True):
+    """The YSF Link Manager card inside the admin page, as ysf_manager.php
+    writes it: one <option> per reflector in a <select name="ysfLinkHost">."""
+    o = ['<div class="ysf-wrapper">', '    <div class="ysf-card">',
+         '        <div id="ysf-nav-placeholder"></div>',
+         '        <div class="ysf-header">YSF Link Manager</div>',
+         '        <div class="ysf-body">',
+         '            <form action="//localhost/admin/index.php?func=ysf_man" method="post">',
+         '                <div class="ysf-form-group">',
+         '                    <label class="ysf-label">Select Reflector</label>',
+         '                    <select name="ysfLinkHost" class="ysfLinkHost" style="width:100%;">',
+         '<option value="none" >None</option>']
+    for rid, name, desc in ysf_hosts()[:limit]:
+        short = name if len(name) < 30 else name[:27] + "..."
+        selected = ' selected="selected"' if name == h.ysf_link else ""
+        if rid.startswith("FCS"):
+            o.append('<option value="%s"%s>%s - %s</option>' % (rid, selected, rid, php_escape(short)))
+        elif desc is None:
+            o.append('<option value="YSF%s" %s>YSF%s - %s</option>' % (rid, selected, rid, php_escape(short)))
+        else:
+            o.append('<option value="YSF%s"%s>YSF%s - %s - %s</option>'
+                     % (rid, selected, rid, php_escape(short), php_escape(desc)))
+    o += ['                    </select>', '                </div>',
+          '                <input type="submit" name="ysfMgrSubmit" value="Execute">',
+          '            </form>', '        </div>', '    </div>', '</div>']
+    return wrap_admin_page("\n".join(o), h) if wrap else "\n".join(o) + "\n"
+
+
 def page_repeaterinfo_legacy(h):
     """An older dashboard's sidebar: tables, not status pills."""
     return (
@@ -692,6 +746,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._manager(q, form)
             if path == "/admin/index.php" and q.get("func") == "dmr_man":
                 return self._send(200, page_dmr_man(h))
+            if path == "/admin/index.php" and q.get("func") == "ysf_man":
+                return self._send(200, page_ysf_man(h))
 
         self._send(404, "<html><body>Not found</body></html>")
 
@@ -942,6 +998,9 @@ def dump_fixtures(outdir):
     w("tgif_links_unused.html", page_tgif_links(h))
     h.gateway = False
     w("dmr_nets_single.html", page_dmr_man(h))
+    w("ysf_man.html", page_ysf_man(h))
+    w("ysf_man_card.html", page_ysf_man(h, limit=60, wrap=False))
+    w("ysf_man_empty.html", wrap_admin_page("", h))
     w("api_result_dmrnet_ok.json", php_json({"commandOutput": "OK"}))
     w("api_result_dmrnet_ko.json", php_json({"commandOutput": "KO"}))
     h = Hotspot()

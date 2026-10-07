@@ -10,13 +10,14 @@ does.
 
 ## What it does
 
-An icon bar icon opens one window with five tabs:
+An icon bar icon opens one window with six tabs:
 
 | Tab | What you see / do |
 | --- | --- |
 | **Status** | Radio state (IDLE / RX / TX / OFFLINE), frequency and modem, every mode and network the dashboard reports, with a **Pause / Resume** button on each mode (the dashboard's *Instant Mode Manager*); hardware cards (CPU, temperature, RAM, uptime…) |
 | **Heard** | The last heard list (UTC time, callsign, mode, target, duration/loss); a live transmission is highlighted |
 | **DMR** | For a DMRGateway hotspot (BrandMeister + TGIF side by side): the DMR networks with an **Enable / Disable** switch each (the dashboard's *DMR Network Manager*); BrandMeister's static talkgroups (**Link / Drop / Delete**), **Add TG…**, dynamic talkgroups with their timeouts, **Drop QSO**, **Drop dynamic**; TGIF's linked talkgroup per timeslot with **Link… / Unlink** |
+| **YSF** | The hotspot's own list of YSF reflectors and FCS rooms (read from the dashboard's *YSF Link Manager* page, so it needs the Admin login), with what YSF is linked to now, **Number…** (type one) and **Unlink**; **Search…** narrows the list by part of a number, name or place (any case) and **Show all** brings it back; a **Link** button on each reflector; the last three linked are one click |
 | **Links** | **Link… / Unlink** for YSF, D-Star, P25 and NXDN, showing what each is linked to now; the last three targets used are one-click buttons |
 | **System** | Restart the WPSD services, update the host files, **Reboot**, **Shut down** (all confirm first); save a diagnostics report |
 

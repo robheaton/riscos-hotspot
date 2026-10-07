@@ -27,7 +27,7 @@
 #include "rows.h"
 
 #define APP_NAME     "Hotspot"
-#define APP_VERSION  "0.05"
+#define APP_VERSION  "0.06"
 
 /* What the Program information window says. \251 is the copyright sign in
  * the Latin-1 alphabet RISC OS uses. */

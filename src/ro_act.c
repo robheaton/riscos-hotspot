@@ -416,7 +416,11 @@ static void send_link(ui_proto proto, const char *target, int slot,
 
     switch (proto) {
         case PROTO_YSF:
-            snprintf(label, sizeof label, "Link YSF %.30s", target);
+            /* A value from the reflector list says YSF or FCS already. */
+            if (isalpha((unsigned char)target[0]))
+                snprintf(label, sizeof label, "Link %.36s", target);
+            else
+                snprintf(label, sizeof label, "Link YSF %.30s", target);
             a = new_action(HS_ACT_YSF, label);
             u_copy(a.s1, sizeof a.s1, target);
             break;
@@ -646,6 +650,37 @@ static void unlink_now(ui_proto proto, int slot)
 }
 
 /* ------------------------------------------------------------------ */
+/* The YSF reflector list                                             */
+/* ------------------------------------------------------------------ */
+
+static void ysf_search_ok(char v[][DLG_BUF], const int *checks, void *ud)
+{
+    (void)checks;
+    (void)ud;
+
+    ui_set_ysf_filter(v[0]);
+    win_model_changed(HS_R_YSF);
+}
+
+static void ysf_search(void)
+{
+    dlg_spec s;
+
+    memset(&s, 0, sizeof s);
+    s.title = "Search YSF reflectors";
+    s.text = "Part of a reflector's number, name or place,\n"
+             "such as 00123, calling, italy or fcs.";
+    s.nfields = 1;
+    s.field[0].label = "Search for";
+    s.field[0].initial = ui_ysf_filter();
+    s.field[0].size = 30;
+    s.ok_label = "Search";
+    s.on_ok = ysf_search_ok;
+
+    dlg_open(&s);
+}
+
+/* ------------------------------------------------------------------ */
 /* System actions                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -788,6 +823,15 @@ void act_run(const ui_btn *b)
 
         case UA_LINK_TO:
             send_link((ui_proto)b->a[0], b->arg, 0, NULL);
+            break;
+
+        case UA_YSF_SEARCH:
+            ysf_search();
+            break;
+
+        case UA_YSF_CLEAR:
+            ui_set_ysf_filter("");
+            win_model_changed(HS_R_YSF);
             break;
 
         case UA_SYS:

@@ -37,6 +37,7 @@
 #define WPSD_MAX_BM_DYN     16
 #define WPSD_MAX_BM_SLOTS   4
 #define WPSD_MAX_DMRNETS    8
+#define WPSD_MAX_YSF        3000
 
 /* ------------------------------------------------------------------ */
 /* Parsed data                                                        */
@@ -160,6 +161,19 @@ typedef struct {
     int         n;
 } wpsd_dmrnets;
 
+/* From the YSF Link Manager page: the reflectors and FCS rooms the hotspot
+ * can link to (its YSFHosts.txt / FCSHosts.txt), in the order it lists them. */
+typedef struct {
+    char value[12];     /* what the form sends: "YSF00001", "FCS00123" */
+    char text[84];      /* "Parrot", "UK-Calling - United Kingdom" */
+} wpsd_ysf;
+
+typedef struct {
+    wpsd_ysf *e;        /* malloc'd; free with wpsd_ysflist_free */
+    int       n;
+    int       cap;
+} wpsd_ysflist;
+
 /* The outcome of an action, boiled down for display. */
 typedef struct {
     int  ok;
@@ -177,6 +191,11 @@ int wpsd_parse_heard(const char *json, size_t n, wpsd_lastheard *out);
 int wpsd_parse_bm(const char *html, size_t n, wpsd_bm *out);
 int wpsd_parse_tgif(const char *html, size_t n, wpsd_tgif *out);
 int wpsd_parse_dmrnets(const char *html, size_t n, wpsd_dmrnets *out);
+
+/* Replaces what `out` holds (which must be zero-initialised the first time).
+ * Returns the number of reflectors found, 0 if the page has no list. */
+int wpsd_parse_ysflist(const char *html, size_t n, wpsd_ysflist *out);
+void wpsd_ysflist_free(wpsd_ysflist *l);
 
 /* system_api.php replies ({"output":[..],"exit_status":0},
  * {"success":true}, {"error":".."}, {"ip":".."}). */
@@ -208,6 +227,8 @@ int wpsd_req_status(wpsd_request *rq);
 int wpsd_req_hw(wpsd_request *rq);
 int wpsd_req_bm_page(wpsd_request *rq);
 int wpsd_req_tgif_links(wpsd_request *rq);
+/* The YSF Link Manager page, which holds the list of reflectors. */
+int wpsd_req_ysflist(wpsd_request *rq);
 /* The DMR Network Manager only exists inside the admin page. */
 int wpsd_req_dmrnets(wpsd_request *rq);
 /* netid: "net1".."net9" or "xlx", as listed by wpsd_parse_dmrnets. */

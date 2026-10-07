@@ -534,7 +534,7 @@ static int s_pause_ysf_with_adjust(void)
     int b;
 
     if (sub == 0) {
-        b = row_button("YSF", "Pause");
+        b = row_button_nth("YSF", 1, "Pause");
         CHECK(b >= 0);
         if (b < 0)
             return 1;
@@ -543,7 +543,7 @@ static int s_pause_ysf_with_adjust(void)
         return 0;
     }
 
-    WAIT(row_button("YSF", "Resume") >= 0, 10);
+    WAIT(row_button_nth("YSF", 1, "Resume") >= 0, 10);
 }
 
 static int s_resume_ysf(void)
@@ -551,7 +551,7 @@ static int s_resume_ysf(void)
     int b;
 
     if (sub == 0) {
-        b = row_button("YSF", "Resume");
+        b = row_button_nth("YSF", 1, "Resume");
         CHECK(b >= 0);
         if (b < 0)
             return 1;
@@ -560,7 +560,7 @@ static int s_resume_ysf(void)
         return 0;
     }
 
-    WAIT(row_button("YSF", "Pause") >= 0, 10);
+    WAIT(row_button_nth("YSF", 1, "Pause") >= 0, 10);
 }
 
 /* ---- Heard --------------------------------------------------------- */
@@ -1192,6 +1192,145 @@ static int s_dstar_relink_recent(void)
          10);
 }
 
+/* ---- The YSF tab: pick a reflector from the hotspot's own list ------ */
+
+static int s_ysf_tab(void)
+{
+    if (sub == 0) {
+        mock_reset();
+        click_tab("YSF");
+        sub = 1;
+        return 0;
+    }
+
+    WAIT(plot("YSF reflectors") >= 0 && plot("YSF00001") >= 0 &&
+         plot("Parrot") >= 0, 10);
+}
+
+static int s_ysf_tab_shown(void)
+{
+    int links = 0;
+    int i;
+
+    check_not_clipped("YSF");
+
+    /* The page was read when the tab came up, and shows the list. */
+    CHECK(mock_log_has("func=ysf_man"));
+    CHECK(plot("Linked to") >= 0);
+    CHECK(plot("Number...") >= 0);
+    CHECK(plot("Unlink") >= 0);
+    CHECK(plot("Search...") >= 0);
+    CHECK(plot("Show all") < 0);                /* nothing narrowed yet */
+    CHECK(plot("Link YSF2DMR") >= 0);
+
+    /* Each reflector has its own Link button (as many as fit in the window). */
+    for (i = 0; i < fw_plot_count(); i++) {
+        if (strcmp(fw_plot_at(i)->text, "Link") == 0)
+            links++;
+    }
+    CHECK(links >= 50);
+
+    /* Names with markup characters came through intact. */
+    CHECK(plot("Friends & Family Net - Ham & Co") >= 0);
+    CHECK(plot("O'Brien's Net - Ireland") >= 0);
+
+    next();
+    return 1;
+}
+
+static int s_ysf_search(void)
+{
+    fw_window *dlg;
+    int i;
+
+    if (sub == 0) {
+        fw_click_plot(plot("Search..."), wimp_CLICK_SELECT);
+        sub = 1;
+        return 0;
+    }
+
+    dlg = dialog();
+    if (dlg == NULL)
+        WAIT(0, 3);
+
+    CHECK(strstr(dlg->def.title_data.indirected_text.text,
+                 "Search YSF reflectors") != NULL);
+    i = fw_find_icon(dlg, "Search for") + 1;
+    CHECK(i > 0);
+    fw_type(dlg, i, "calling");
+    fw_click_icon(dlg, fw_find_icon(dlg, "Search"), wimp_CLICK_SELECT);
+    next();
+    return 1;
+}
+
+/* Narrowed to what matches, in any case; Show all puts the rest back. */
+static int s_ysf_narrowed(void)
+{
+    WAIT(plot("Reflectors matching \"calling\"") >= 0 &&
+         plot("YSF00010") >= 0 && plot("Parrot") < 0 &&
+         plot("Show all") >= 0, 10);
+}
+
+static int s_ysf_link_from_list(void)
+{
+    int b;
+
+    if (sub == 0) {
+        mock_reset();
+        b = row_button("YSF00010", "Link");
+        CHECK(b >= 0);
+        if (b < 0)
+            return 1;
+        fw_click_plot(b, wimp_CLICK_SELECT);
+        sub = 1;
+        return 0;
+    }
+
+    /* Linked, the hotspot says so, and it is remembered for one click. */
+    WAIT(mock_log_has("ysfLinkHost=YSF00010&Link=LINK") &&
+         row_has("Linked to", "Test YSF00010") &&
+         row_button("Recently linked:", "YSF00010") >= 0, 10);
+}
+
+static int s_ysf_remembered_from_list(void)
+{
+    CHECK(file_has("<Hotspot$Dir>.Choices", "RecentYSF=YSF00010,00001,FCS00123"));
+    next();
+    return 1;
+}
+
+static int s_ysf_show_all(void)
+{
+    if (sub == 0) {
+        fw_click_plot(plot("Show all"), wimp_CLICK_SELECT);
+        sub = 1;
+        return 0;
+    }
+
+    WAIT(plot("Show all") < 0 && plot("Parrot") >= 0, 10);
+}
+
+/* The old way, by number, is still there. */
+static int s_ysf_number(void)
+{
+    fw_window *dlg;
+
+    if (sub == 0) {
+        fw_click_plot(plot("Number..."), wimp_CLICK_SELECT);
+        sub = 1;
+        return 0;
+    }
+
+    dlg = dialog();
+    if (dlg == NULL)
+        WAIT(0, 3);
+
+    CHECK(fw_find_icon(dlg, "Reflector") >= 0);
+    fw_key(dlg->w, (wimp_i)fw_caret_icon, wimp_KEY_ESCAPE);
+    next();
+    return 1;
+}
+
 /* ---- System -------------------------------------------------------- */
 
 static int s_system_tab(void)
@@ -1554,7 +1693,7 @@ static int s_window_menu(void)
         return 0;
     }
 
-    WAIT(row_button("YSF", "Resume") >= 0, 10);
+    WAIT(row_button_nth("YSF", 1, "Resume") >= 0, 10);
 }
 
 static int s_window_menu_views(void)
@@ -2250,6 +2389,9 @@ static const step_fn steps[] = {
     s_links_tab, s_ysf_link, s_ysf_linked, s_ysf_remembered,
     s_dstar_link, s_dstar_linked,
     s_ysf_unlink, s_dstar_unlink, s_ysf_relink_recent, s_dstar_relink_recent,
+    s_ysf_tab, s_ysf_tab_shown, s_ysf_search, s_ysf_narrowed,
+    s_ysf_link_from_list, s_ysf_remembered_from_list, s_ysf_show_all,
+    s_ysf_number,
     s_system_tab, s_reboot_cancel, s_restart, s_reboot_ok, s_diagnostics,
     s_info_window, s_help, s_error_text_plain, s_open_requests_leave_extent,
     s_window_menu, s_window_menu_views, s_menu_heard_shown,

@@ -180,6 +180,88 @@ static void test_display_text(void)
     CHECK_STR(t, "line one two   three ");
 }
 
+static void test_ysflist(void)
+{
+    size_t n;
+    char *t;
+    wpsd_ysflist l;
+    wpsd_request rq;
+    int i;
+    int found_special = 0;
+
+    memset(&l, 0, sizeof l);
+
+    CHECK(wpsd_req_ysflist(&rq) == 0);
+    CHECK_STR(rq.target, "/admin/index.php?func=ysf_man");
+    CHECK(rq.auth && strcmp(rq.method, "GET") == 0);
+
+    /* The mock's page: None, four special links, nine named, 300 generated
+     * and 40 FCS rooms. "None" (unlink) is not a reflector. */
+    t = load("ysf_man.html", &n);
+    CHECK(wpsd_parse_ysflist(t, n, &l) == 353);
+    CHECK(l.n == 353);
+    CHECK_STR(l.e[0].value, "YSF00001");
+    CHECK_STR(l.e[0].text, "Parrot");
+    CHECK_STR(l.e[1].text, "Link YSF2DMR");
+
+    for (i = 0; i < l.n; i++) {
+        CHECK(strcmp(l.e[i].value, "none") != 0);
+
+        /* Entities are decoded; names are as long as the page cut them. */
+        if (strcmp(l.e[i].value, "YSF00014") == 0) {
+            CHECK_STR(l.e[i].text, "Friends & Family Net - Ham & Co");
+            found_special++;
+        }
+        if (strcmp(l.e[i].value, "YSF00015") == 0) {
+            CHECK_STR(l.e[i].text, "O'Brien's Net - Ireland");
+            found_special++;
+        }
+        if (strcmp(l.e[i].value, "YSF00016") == 0) {
+            CHECK_STR(l.e[i].text,
+                      "A-Rather-Long-Reflector-Nam... - A long description");
+            found_special++;
+        }
+    }
+    CHECK(found_special == 3);
+
+    CHECK_STR(l.e[l.n - 1].value, "FCS00040");
+    CHECK_STR(l.e[l.n - 1].text, "FCS room 40");
+    free(t);
+
+    /* A page with no list (or without the select at all) finds nothing, and
+     * leaves nothing behind. */
+    t = load("ysf_man_empty.html", &n);
+    CHECK(wpsd_parse_ysflist(t, n, &l) == 0);
+    CHECK(l.n == 0 && l.e == NULL);
+    free(t);
+
+    t = load("ysf_man.html", &n);
+    CHECK(wpsd_parse_ysflist(t, n, &l) == 353);
+    free(t);
+    CHECK(wpsd_parse_ysflist("<select name=\"other\"><option value=\"YSF1\">x", 44, &l)
+          == 0);
+    CHECK(l.e == NULL);
+
+    /* Values the dashboard would refuse are not offered. */
+    {
+        static const char page[] =
+            "<select name=\"ysfLinkHost\"><option value=\"none\">None</option>"
+            "<option value=\"YSF 1\">bad</option><option value=\"\">empty</option>"
+            "<option value=\"YSF123456789012\">too long</option>"
+            "<option value=\"YSF00007\" selected=\"selected\">YSF00007 - Seven"
+            "<option value=\"FCS00009\">FCS00009</option></select>";
+
+        CHECK(wpsd_parse_ysflist(page, sizeof page - 1, &l) == 2);
+        CHECK_STR(l.e[0].value, "YSF00007");
+        CHECK_STR(l.e[0].text, "Seven");        /* no </option>: ends at the next */
+        CHECK_STR(l.e[1].value, "FCS00009");
+        CHECK_STR(l.e[1].text, "");
+    }
+
+    wpsd_ysflist_free(&l);
+    CHECK(l.e == NULL && l.n == 0);
+}
+
 static void test_scan_prefix(void)
 {
     char out[24];
@@ -1283,6 +1365,143 @@ static void test_rows_dmr_and_links(void)
     free(m);
 }
 
+static void test_rows_ysf(void)
+{
+    hs_model *m = (hs_model *)malloc(sizeof *m);
+    hs_config cfg;
+    ui_rows r;
+    const ui_btn *b;
+    size_t n;
+    char *t;
+    int i;
+
+    ui_rows_init(&r);
+    hs_config_defaults(&cfg);
+    u_copy(cfg.host, sizeof cfg.host, "10.0.0.27");
+    ui_set_ysf_filter("");
+
+    CHECK(ui_view_focus(VIEW_YSF) == HS_R_YSF);
+    CHECK_STR(ui_view_name(VIEW_YSF), "YSF");
+
+    /* The list not read yet: what it is linked to now, and a way to type one. */
+    load_model(m, "repeaterinfo_basic.html", "radioinfo_idle.html");
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(find_row(&r, "YSF reflectors") >= 0);
+    CHECK(find_row(&r, "Reading the reflector list...") >= 0);
+    i = find_row(&r, "Linked to");
+    CHECK(i >= 0 && r.row[i].style == US_GOOD && r.row[i].nbtn == 2);
+    CHECK_STR(r.row[i].col[1], "UK-Calling");
+    CHECK(r.row[i].btn[0].action == UA_LINK && r.row[i].btn[0].a[0] == PROTO_YSF &&
+          r.row[i].btn[0].a[1] == 1);
+    CHECK(r.row[i].btn[1].action == UA_LINK && r.row[i].btn[1].a[1] == 0);
+    CHECK(count_buttons(&r, UA_YSF_SEARCH, NULL) == 1);
+    CHECK(count_buttons(&r, UA_YSF_CLEAR, NULL) == 0);
+    CHECK(count_buttons(&r, UA_LINK_TO, NULL) == 0);
+
+    /* The whole list: the first 150, and a note about the rest. */
+    t = load("ysf_man.html", &n);
+    m->ysf_state = wpsd_parse_ysflist(t, n, &m->ysf) > 0 ? 1 : -1;
+    free(t);
+    CHECK(m->ysf_state == 1);
+    CHECK(ui_ysf_matches(m, "") == 353);
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(count_buttons(&r, UA_LINK_TO, NULL) == 150);
+    CHECK(r.n < UI_MAX_ROWS);
+    b = find_button(&r, UA_LINK_TO, "YSF00001");
+    CHECK(b != NULL && strcmp(b->label, "Link") == 0 && b->a[0] == PROTO_YSF);
+    i = find_row(&r, "YSF00001");
+    CHECK(i >= 0 && r.row[i].kind == UR_KV);
+    CHECK_STR(r.row[i].col[1], "Parrot");
+    {
+        int more = 0;
+
+        for (i = 0; i < r.n; i++) {
+            if (strstr(r.row[i].col[0], "203 more") != NULL)
+                more = 1;
+        }
+        CHECK(more);
+    }
+
+    /* Narrowed by part of a name, in any case. */
+    ui_set_ysf_filter("  CALLING ");
+    CHECK_STR(ui_ysf_filter(), "CALLING");
+    CHECK(ui_ysf_matches(m, ui_ysf_filter()) == 1);
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(count_buttons(&r, UA_LINK_TO, NULL) == 1);
+    b = find_button(&r, UA_LINK_TO, "YSF00010");
+    CHECK(b != NULL);
+    CHECK(find_row(&r, "Reflectors matching \"CALLING\"") >= 0);
+    CHECK(count_buttons(&r, UA_YSF_CLEAR, NULL) == 1);
+
+    /* ... or of the number, or the place. */
+    ui_set_ysf_filter("FCS0003");
+    CHECK(ui_ysf_matches(m, "FCS0003") == 10);
+    ui_set_ysf_filter("italy");
+    CHECK(ui_ysf_matches(m, "italy") == 1);
+    ui_set_ysf_filter("zzzz");
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(find_row(&r, "No reflector matches.") >= 0);
+    CHECK(count_buttons(&r, UA_LINK_TO, NULL) == 0);
+
+    /* A long name is cut with "...", not run off the edge. */
+    ui_set_ysf_filter("Rather");
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    i = find_row(&r, "YSF00016");
+    CHECK(i >= 0);
+    CHECK(strlen(r.row[i].col[1]) <= 45);
+    CHECK(strcmp(r.row[i].col[1] + strlen(r.row[i].col[1]) - 3, "...") == 0);
+    ui_set_ysf_filter("");
+
+    /* Recently linked ones are one click, as on the Links tab. */
+    hs_mru_push(&cfg, PROTO_YSF, "YSF00010");
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    i = find_row(&r, "Recently linked:");
+    CHECK(i >= 0 && r.row[i].nbtn == 1);
+    CHECK_STR(r.row[i].btn[0].arg, "YSF00010");
+    CHECK(r.row[i].btn[0].action == UA_LINK_TO);
+
+    /* The hotspot refused the login / has no list. */
+    m->ysf_state = -2;
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(count_buttons(&r, UA_LINK_TO, NULL) == 1);      /* just the recent one */
+    CHECK(find_row(&r, "The hotspot refused the login - check Choices.") >= 0);
+    m->ysf_state = -1;
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(find_row(&r, "The hotspot's YSF Link Manager page has no reflector list.") >= 0);
+    CHECK(count_buttons(&r, UA_LINK, "") >= 2);         /* Number... still there */
+
+    /* Paused, or not on this hotspot. */
+    wpsd_ysflist_free(&m->ysf);
+    m->ysf_state = 0;
+    for (i = 0; i < m->status.npill; i++) {
+        if (strcmp(m->status.pill[i].label, "YSF") == 0)
+            m->status.pill[i].state = PILL_PAUSED;
+    }
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    {
+        int warned = 0;
+
+        for (i = 0; i < r.n; i++) {
+            if (strstr(r.row[i].col[0], "YSF is paused") != NULL &&
+                r.row[i].style == US_WARN)
+                warned = 1;
+        }
+
+        CHECK(warned);
+    }
+    for (i = 0; i < m->status.npill; i++) {
+        if (strcmp(m->status.pill[i].label, "YSF") == 0)
+            m->status.pill[i].state = PILL_INACTIVE;
+    }
+    ui_rows_build(&r, m, &cfg, VIEW_YSF);
+    CHECK(find_row(&r, "YSF is not enabled on this hotspot.") >= 0);
+    CHECK(count_buttons(&r, UA_LINK, NULL) == 0);
+
+    wpsd_ysflist_free(&m->ysf);
+    ui_rows_free(&r);
+    free(m);
+}
+
 static void test_recent_targets(void)
 {
     hs_config cfg;
@@ -1342,6 +1561,7 @@ int main(int argc, char **argv)
 
     test_util();
     test_display_text();
+    test_ysflist();
     test_scan_prefix();
     test_html();
     test_json();
@@ -1354,6 +1574,7 @@ int main(int argc, char **argv)
     test_builders();
     test_rows();
     test_rows_dmr_and_links();
+    test_rows_ysf();
     test_recent_targets();
 
     printf("%d checks, %d failures\n", checks, failures);

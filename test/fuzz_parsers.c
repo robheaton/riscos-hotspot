@@ -131,6 +131,7 @@ static wpsd_lastheard lh;
 static wpsd_bm bm;
 static wpsd_tgif tgif;
 static wpsd_dmrnets nets;
+static wpsd_ysflist ysf;
 static hs_model model;
 static ui_rows rows;
 
@@ -148,8 +149,12 @@ static void exercise_rows(void)
     hs_mru_push(&cfg, PROTO_TGIF, "2341/2");
     hs_mru_push(&cfg, PROTO_DSTAR, "REF001 C");
 
+    /* Every tab, the YSF one with and without a search. */
     for (v = 0; v < VIEW_COUNT; v++)
         ui_rows_build(&rows, &model, &cfg, (ui_view)v);
+    ui_set_ysf_filter("a");
+    ui_rows_build(&rows, &model, &cfg, VIEW_YSF);
+    ui_set_ysf_filter("");
 }
 
 /* What a person might type into the Find hotspot box (a C string). */
@@ -180,10 +185,12 @@ static void exercise(const char *p, size_t n)
     wpsd_parse_bm(p, n, &bm);
     wpsd_parse_tgif(p, n, &tgif);
     wpsd_parse_dmrnets(p, n, &nets);
+    wpsd_parse_ysflist(p, n, &ysf);
     wpsd_parse_api_result(p, n, &res);
     exercise_prefix(p, n);
 
     /* The same input, taken as each kind of page, shown in every tab. */
+    wpsd_ysflist_free(&model.ysf);
     memset(&model, 0, sizeof model);
     model.conn = 1;
     model.status_ok = wpsd_parse_status(p, n, &model.status) > 0;
@@ -193,6 +200,7 @@ static void exercise(const char *p, size_t n)
     model.bm_state = wpsd_parse_bm(p, n, &model.bm) ? 1 : -1;
     model.tgif_state = wpsd_parse_tgif(p, n, &model.tgif) ? 1 : -1;
     model.dmrnet_state = wpsd_parse_dmrnets(p, n, &model.dmrnets) ? 1 : -1;
+    model.ysf_state = wpsd_parse_ysflist(p, n, &model.ysf) > 0 ? 1 : -1;
     exercise_rows();
 
     for (i = 0; i < sizeof prefixes / sizeof prefixes[0]; i++)
@@ -243,7 +251,8 @@ int main(int argc, char **argv)
         "repeaterinfo_gateway.html", "repeaterinfo_gateway_tgif_off.html",
         "tgif_links.html", "tgif_links_none.html", "tgif_links_unused.html",
         "dmr_nets.html", "dmr_nets_tgif_off.html", "dmr_nets_single.html",
-        "api_result_dmrnet_ok.json", "api_result_dmrnet_ko.json"
+        "api_result_dmrnet_ok.json", "api_result_dmrnet_ko.json",
+        "ysf_man.html", "ysf_man_card.html", "ysf_man_empty.html"
     };
     size_t nfiles = sizeof files / sizeof files[0];
     char *data[32];
@@ -298,6 +307,8 @@ int main(int argc, char **argv)
         free(data[i]);
 
     ui_rows_free(&rows);
+    wpsd_ysflist_free(&ysf);
+    wpsd_ysflist_free(&model.ysf);
 
     printf("fuzzed %ld mutated inputs: no crashes, overruns or hangs\n",
            iterations);

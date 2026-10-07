@@ -13,7 +13,7 @@
 #include <string.h>
 
 static const char *const view_names[VIEW_COUNT] = {
-    "Status", "Heard", "DMR", "Links", "System"
+    "Status", "Heard", "DMR", "YSF", "Links", "System"
 };
 
 static const char *const mode_names[] = {
@@ -198,6 +198,8 @@ unsigned ui_view_focus(ui_view v)
             return HS_R_HEARD;
         case VIEW_DMR:
             return HS_R_BM | HS_R_TGIF | HS_R_DMRNET;
+        case VIEW_YSF:
+            return HS_R_YSF;
         case VIEW_STATUS:
         case VIEW_SYSTEM:
             return HS_R_HW;
@@ -838,6 +840,151 @@ static void build_dmr(ui_rows *r, const hs_model *m, const hs_config *cfg)
     build_tgif(r, m, cfg);
 }
 
+/* ------------------------------------------------------------------ */
+/* The YSF tab: pick a reflector from the hotspot's own list           */
+/* ------------------------------------------------------------------ */
+
+#define YSF_SHOWN       150     /* the most rows of the list shown at once */
+#define YSF_TEXT_CHARS  42      /* a longer name is cut, with "..." */
+
+static char ysf_filter[32];
+
+void ui_set_ysf_filter(const char *text)
+{
+    u_copy(ysf_filter, sizeof ysf_filter, text != NULL ? text : "");
+    u_trim(ysf_filter);
+}
+
+const char *ui_ysf_filter(void)
+{
+    return ysf_filter;
+}
+
+static int ysf_matches(const wpsd_ysf *e, const char *filter)
+{
+    return filter[0] == '\0' ||
+           u_ifind(e->value, strlen(e->value), filter) != NULL ||
+           u_ifind(e->text, strlen(e->text), filter) != NULL;
+}
+
+int ui_ysf_matches(const hs_model *m, const char *filter)
+{
+    int i;
+    int n = 0;
+
+    if (m->ysf_state != 1)
+        return 0;
+
+    for (i = 0; i < m->ysf.n; i++) {
+        if (ysf_matches(&m->ysf.e[i], filter))
+            n++;
+    }
+
+    return n;
+}
+
+static void build_ysf(ui_rows *r, const hs_model *m, const hs_config *cfg)
+{
+    int state = ui_mode_state(m, "YSF");
+    const char *cur = ui_current_link(m, "YSF");
+    ui_row *row;
+    char text[160];
+    int shown = 0;
+    int total;
+    int i;
+
+    head(r, "YSF reflectors");
+
+    if (m->status_ok && (state < 0 || state == PILL_INACTIVE)) {
+        note(r, US_DIM, "YSF is not enabled on this hotspot.");
+        return;
+    }
+
+    if (state == PILL_PAUSED) {
+        note(r, US_WARN,
+             "YSF is paused - resume it on the Status tab to use it.");
+        blank(r);
+    }
+
+    /* What it is linked to now, and the way to put in a number by hand. */
+    if (state == PILL_PAUSED)
+        row = kv(r, US_WARN, "Linked to", "mode paused");
+    else if (cur == NULL || is_unlinked_text(cur))
+        row = kv(r, US_DIM, "Linked to", (cur != NULL && cur[0] != '\0')
+                                              ? cur : "not linked");
+    else
+        row = kv(r, US_GOOD, "Linked to", cur);
+    if (row != NULL) {
+        add_btn(row, UA_LINK, "Number...", NULL, (int)PROTO_YSF, 1, 0);
+        add_btn(row, UA_LINK, "Unlink", NULL, (int)PROTO_YSF, 0, 0);
+    }
+
+    recents_row(r, cfg, PROTO_YSF, "Recently linked:");
+    blank(r);
+
+    /* The search, and the list it narrows. */
+    if (ysf_filter[0] != '\0')
+        snprintf(text, sizeof text, "Reflectors matching \"%.30s\"",
+                 ysf_filter);
+    else
+        u_copy(text, sizeof text, "All the hotspot's reflectors");
+    row = note(r, US_NORMAL, text);
+    if (row != NULL) {
+        add_btn(row, UA_YSF_SEARCH, "Search...", NULL, 0, 0, 0);
+        if (ysf_filter[0] != '\0')
+            add_btn(row, UA_YSF_CLEAR, "Show all", NULL, 0, 0, 0);
+    }
+
+    if (m->ysf_state == -2) {
+        note(r, US_WARN, "The hotspot refused the login - check Choices.");
+        return;
+    }
+
+    if (m->ysf_state == -1) {
+        note(r, US_WARN,
+             "The hotspot's YSF Link Manager page has no reflector list.");
+        note(r, US_DIM, "Number... above still links a reflector you type.");
+        return;
+    }
+
+    if (m->ysf_state != 1) {
+        note(r, US_DIM, "Reading the reflector list...");
+        return;
+    }
+
+    total = ui_ysf_matches(m, ysf_filter);
+    if (total == 0) {
+        note(r, US_DIM, "No reflector matches.");
+        return;
+    }
+
+    for (i = 0; i < m->ysf.n && shown < YSF_SHOWN; i++) {
+        const wpsd_ysf *e = &m->ysf.e[i];
+        char shown_text[YSF_TEXT_CHARS + 4];
+
+        if (!ysf_matches(e, ysf_filter))
+            continue;
+
+        if (strlen(e->text) > YSF_TEXT_CHARS)
+            snprintf(shown_text, sizeof shown_text, "%.*s...", YSF_TEXT_CHARS,
+                     e->text);
+        else
+            u_copy(shown_text, sizeof shown_text, e->text);
+
+        row = kv(r, US_NORMAL, e->value, shown_text);
+        if (row != NULL)
+            add_btn(row, UA_LINK_TO, "Link", e->value, (int)PROTO_YSF, 0, 0);
+        shown++;
+    }
+
+    if (total > shown) {
+        snprintf(text, sizeof text,
+                 "%d more: type part of a name or number in Search to narrow "
+                 "the list.", total - shown);
+        note(r, US_DIM, text);
+    }
+}
+
 static void build_system(ui_rows *r, const hs_model *m)
 {
     int i;
@@ -893,6 +1040,9 @@ void ui_rows_build(ui_rows *r, const hs_model *m, const hs_config *cfg,
             break;
         case VIEW_DMR:
             build_dmr(r, m, cfg);
+            break;
+        case VIEW_YSF:
+            build_ysf(r, m, cfg);
             break;
         case VIEW_LINKS:
             build_links(r, m, cfg);

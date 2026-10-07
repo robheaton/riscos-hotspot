@@ -798,6 +798,130 @@ int wpsd_parse_dmrnets(const char *html, size_t n, wpsd_dmrnets *out)
 }
 
 /* ================================================================== */
+/* The YSF reflector list                                             */
+/* ================================================================== */
+
+void wpsd_ysflist_free(wpsd_ysflist *l)
+{
+    free(l->e);
+    memset(l, 0, sizeof *l);
+}
+
+static int ysf_add(wpsd_ysflist *l, const char *value, const char *text)
+{
+    wpsd_ysf *e;
+
+    if (l->n >= WPSD_MAX_YSF)
+        return 0;
+
+    if (l->n == l->cap) {
+        int cap = (l->cap != 0) ? l->cap * 2 : 256;
+        wpsd_ysf *ne = (wpsd_ysf *)realloc(l->e, (size_t)cap * sizeof *ne);
+
+        if (ne == NULL)
+            return 0;
+
+        l->e = ne;
+        l->cap = cap;
+    }
+
+    e = &l->e[l->n++];
+    u_copy(e->value, sizeof e->value, value);
+    u_copy(e->text, sizeof e->text, text);
+    return 1;
+}
+
+/* The page's <select name="ysfLinkHost"> holds one <option> per reflector:
+ *
+ *   <option value="YSF00001" >YSF00001 - Parrot</option>
+ *   <option value="YSF12345" >YSF12345 - UK-Calling - United Kingdom</option>
+ *   <option value="FCS00123" >FCS00123 - Room name</option>
+ *
+ * plus "none" (unlink). The value is what the form posts, so only plain
+ * letters and digits are taken. */
+int wpsd_parse_ysflist(const char *html, size_t n, wpsd_ysflist *out)
+{
+    const char *end = html + n;
+    const char *sel = u_ifind(html, n, "name=\"ysfLinkHost\"");
+    const char *sel_end;
+    const char *p;
+
+    wpsd_ysflist_free(out);
+
+    if (sel == NULL)
+        return 0;
+
+    p = (const char *)memchr(sel, '>', (size_t)(end - sel));
+    if (p == NULL)
+        return 0;
+    p++;
+
+    sel_end = u_ifind(p, (size_t)(end - p), "</select>");
+    if (sel_end == NULL)
+        sel_end = end;
+
+    for (;;) {
+        const char *opt = u_ifind(p, (size_t)(sel_end - p), "<option");
+        const char *te;
+        const char *close;
+        const char *next;
+        const char *text_end;
+        char value[16];
+        char label[128];
+        const char *text;
+        size_t vlen;
+        size_t i;
+        int valid = 1;
+
+        if (opt == NULL)
+            break;
+
+        te = html_tag_end(opt, sel_end);
+        if (te == NULL)
+            break;
+        p = te;
+
+        /* The label runs to its </option>, or to the next <option> if the
+         * page left the closing tag off (searching only that far keeps a
+         * page with none at all from being scanned to its end each time). */
+        next = u_ifind(te, (size_t)(sel_end - te), "<option");
+        text_end = (next != NULL) ? next : sel_end;
+        close = u_ifind(te, (size_t)(text_end - te), "</option>");
+        if (close != NULL)
+            text_end = close;
+        p = text_end;
+
+        if (!html_attr_str(opt, te, "value", value, sizeof value))
+            continue;
+
+        vlen = strlen(value);
+        if (vlen == 0 || vlen > 11 || u_ieq(value, "none"))
+            continue;
+        for (i = 0; i < vlen; i++) {
+            if (!isalnum((unsigned char)value[i]))
+                valid = 0;
+        }
+        if (!valid)
+            continue;
+
+        html_text(te, (size_t)(text_end - te), label, sizeof label);
+
+        /* The label starts with the value: "YSF00001 - Parrot". */
+        text = label;
+        if (strncmp(label, value, vlen) == 0 && label[vlen] == ' ' &&
+            label[vlen + 1] == '-' && label[vlen + 2] == ' ')
+            text = label + vlen + 3;
+        else if (strcmp(label, value) == 0)
+            text = "";
+
+        if (!ysf_add(out, value, text))
+            break;
+    }
+
+    return out->n;
+}
+
+/* ================================================================== */
 /* Action replies                                                     */
 /* ================================================================== */
 
@@ -1113,6 +1237,12 @@ int wpsd_req_tgif_links(wpsd_request *rq)
 {
     rq_init(rq, "GET", 0);
     return rq_target(rq, "/mmdvmhost/tgif_links.php");
+}
+
+int wpsd_req_ysflist(wpsd_request *rq)
+{
+    rq_init(rq, "GET", 1);
+    return rq_target(rq, "/admin/index.php?func=ysf_man");
 }
 
 int wpsd_req_dmrnets(wpsd_request *rq)

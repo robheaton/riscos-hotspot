@@ -57,7 +57,8 @@ void hs_mru_push(hs_config *cfg, int proto, const char *target);
 #define HS_R_BM      0x10u
 #define HS_R_TGIF    0x20u
 #define HS_R_DMRNET  0x40u      /* the (large) DMR Network Manager page */
-#define HS_R_ALL     0x7Fu
+#define HS_R_YSF     0x80u      /* the YSF Link Manager page: the reflector list */
+#define HS_R_ALL     0xFFu
 #define HS_C_CONN    0x100u     /* connection state or message changed */
 #define HS_C_ACTION  0x200u     /* an action finished */
 #define HS_C_SCAN    0x400u     /* the search for a hotspot made progress */
@@ -111,6 +112,8 @@ typedef struct {
     wpsd_tgif      tgif;
     int            dmrnet_state;    /* 0 unknown, 1 ok, -1 none, -2 login */
     wpsd_dmrnets   dmrnets;
+    int            ysf_state;       /* 0 unknown, 1 list ok, -1 no list, -2 login */
+    wpsd_ysflist   ysf;             /* the reflectors (heap; the client frees it) */
 
     /* The search of the local network for a hotspot. */
     int            scan_state;      /* 0 idle, 1 running, 2 finished */
@@ -144,10 +147,11 @@ void hs_set_polling(hs_client *hs, int on, unsigned long now_cs);
 /* Queue a fetch of the parts named in `mask` (HS_R_*) right away. */
 void hs_refresh(hs_client *hs, unsigned mask);
 
-/* Which extra parts (HS_R_HEARD, HS_R_HW, HS_R_BM, HS_R_TGIF, HS_R_DMRNET)
- * the polling should keep fresh - what the visible tab shows. The radio
- * state and the status page are always polled. Anything newly asked for is
- * fetched straight away. */
+/* Which extra parts (HS_R_HEARD, HS_R_HW, HS_R_BM, HS_R_TGIF, HS_R_DMRNET,
+ * HS_R_YSF) the polling should keep fresh - what the visible tab shows. The
+ * radio state and the status page are always polled; the big pages (the DMR
+ * networks, the YSF reflector list) are fetched when their tab comes up and
+ * again on a refresh. Anything newly asked for is fetched straight away. */
 void hs_set_focus(hs_client *hs, unsigned parts);
 unsigned hs_get_focus(const hs_client *hs);
 

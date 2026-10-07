@@ -1,4 +1,4 @@
-Hotspot 0.05 - test against the real hotspot
+Hotspot 0.06 - test against the real hotspot
 ============================================
 
 Hotspot is a desktop controller for a WPSD hotspot. It uses the hotspot's
@@ -10,7 +10,7 @@ Step by step
 ------------
 1. Put the program on a local disc.
    Copy the !Hotspot folder from this folder (Development/Hotspot on the
-   NAS) onto a local disc, or unzip Hotspot-0.05.zip there. Run it from the
+   NAS) onto a local disc, or unzip Hotspot-0.06.zip there. Run it from the
    local copy, not from the share.
 
 2. Start it.
@@ -31,7 +31,7 @@ Step by step
    transmit, the modem type), Modes Enabled with DMR and YSF each having a
    Pause button, the DMR masters (BM 2341 United Kingdom, TGIF Network),
    YSF Status with "Link  GB-NWFG2", and the hardware figures at the end.
-   If it says "Not connected" go to step 11.
+   If it says "Not connected" go to step 12.
 
 5. Click the Heard tab.
    The last heard list. When someone is transmitting, their row turns green
@@ -55,13 +55,24 @@ Step by step
    button links the same reflector again in one go. Put GB-NWFG2 back with
    Link... when finished.
 
-8. Try Pause and Resume on the Status tab (Pause beside DMR or YSF; the
+8. Click the YSF tab.
+   The hotspot's own list of YSF reflectors and FCS rooms (it is read from
+   the hotspot when the tab comes up, so this needs the Admin login). At the
+   top: what YSF is linked to now, with Number... (type one, as on the Links
+   tab) and Unlink, and the ones you linked recently. Click Search..., type
+   part of a name, number or place (such as calling, italy or 00010) and
+   click Search: the list narrows to what matches, and Show all brings the
+   rest back. Click Link beside a reflector: after a few seconds "Linked to"
+   shows it, and it appears under "Recently linked". Put GB-NWFG2 back when
+   finished (Number..., or search for it and click Link).
+
+9. Try Pause and Resume on the Status tab (Pause beside DMR or YSF; the
    button turns into Resume).
 
-9. Press the Menu button over the window: Refresh, Modes, DMR, Links,
+10. Press the Menu button over the window: Refresh, Modes, DMR, Links,
    System, View, Find hotspot..., Save diagnostics, Choices.
 
-10. Press the Menu button over the icon bar icon: Info, Help..., Find
+11. Press the Menu button over the icon bar icon: Info, Help..., Find
     hotspot..., Choices..., Quit (clicking the icon itself opens the window;
     Help... opens this kind of text file in your editor). The menu should sit
     exactly on top of the icon bar, not overlap it. Move the
@@ -69,7 +80,7 @@ Step by step
     opens beside the menu (Name, Purpose, Author, Version), as in other
     programs, and goes away with the menu.
 
-11. If the hotspot's address ever changes.
+12. If the hotspot's address ever changes.
     Click Find hotspot... (beside the "Not connected" message, in the
     window, or in either menu). The box starts with 10.0.0. - check it is
     the first three numbers of your network's addresses and click Search.
@@ -78,7 +89,7 @@ Step by step
     you are already using it says so.) You can also just change the address
     in Choices.
 
-12. If anything looks wrong, open the System tab and click Save beside
+13. If anything looks wrong, open the System tab and click Save beside
     "Save diagnostics report": the box tells you where the file is.
     Send it (or describe what you saw). The report holds what the hotspot
     answered to each request, never the password.

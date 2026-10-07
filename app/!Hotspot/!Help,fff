@@ -18,6 +18,8 @@ Getting started
      Heard    the last heard list; a live transmission is highlighted
      DMR      switch DMR networks (BrandMeister, TGIF) on and off, manage
               BrandMeister talkgroups, link TGIF talkgroups
+     YSF      the hotspot's list of YSF reflectors and FCS rooms: search it
+              by part of a name, number or place and click Link
      Links    link or unlink YSF, D-Star, P25, NXDN reflectors/talkgroups;
               the last few you used are one click away
      System   restart services, update host files, reboot, shut down

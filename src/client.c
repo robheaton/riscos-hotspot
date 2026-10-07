@@ -40,13 +40,14 @@ typedef enum {
     JOB_BM,
     JOB_TGIF,
     JOB_DMRNET,
+    JOB_YSFLIST,
     JOB_ACTION,
     JOB_KINDS
 } job_kind;
 
 static const char *const job_names[JOB_KINDS] = {
     "radio", "last heard", "status", "system", "brandmeister", "tgif",
-    "dmr networks", "action"
+    "dmr networks", "ysf reflectors", "action"
 };
 
 typedef struct {
@@ -64,6 +65,7 @@ typedef struct {
     char          err[160];
     char          head[600];
     size_t        len;
+    size_t        offset;       /* where in the reply the kept part starts */
     char         *body;
     int           truncated;
     unsigned long when;
@@ -188,6 +190,7 @@ void hs_free(hs_client *hs)
 
     scan_free(hs->scan);
     clear_diag(hs);
+    wpsd_ysflist_free(&hs->model.ysf);
     free(hs);
 }
 
@@ -203,6 +206,7 @@ void hs_set_config(hs_client *hs, const hs_config *cfg)
 
     if (moved) {
         /* Don't keep showing another hotspot's state. */
+        wpsd_ysflist_free(&hs->model.ysf);
         memset(&hs->model, 0, sizeof hs->model);
         hs->qcount = 0;
         if (hs->req != NULL) {
@@ -323,6 +327,12 @@ static int make_fetch(const hs_client *hs, job_kind kind, hs_job *job)
             job->timeout_cs = HS_FORM_TIMEOUT;
             job->max_body = HS_PAGE_MAX;
             break;
+        case JOB_YSFLIST:
+            /* Likewise: the admin page with the hundreds of reflectors. */
+            rc = wpsd_req_ysflist(&job->rq);
+            job->timeout_cs = HS_FORM_TIMEOUT;
+            job->max_body = HS_PAGE_MAX;
+            break;
         default:
             break;
     }
@@ -342,7 +352,8 @@ void hs_refresh(hs_client *hs, unsigned mask)
         { HS_R_HW,     JOB_HW },
         { HS_R_BM,     JOB_BM },
         { HS_R_TGIF,   JOB_TGIF },
-        { HS_R_DMRNET, JOB_DMRNET }
+        { HS_R_DMRNET, JOB_DMRNET },
+        { HS_R_YSF,    JOB_YSFLIST }
     };
     size_t i;
 
@@ -448,7 +459,28 @@ static void record_diag(hs_client *hs, const hs_job *job, const http_req *r,
     u_copy(d->head, sizeof d->head, hdr);
 
     if (len > HS_DIAG_BODY_MAX) {
-        len = HS_DIAG_BODY_MAX;
+        /* The big admin pages (the DMR networks, the YSF reflectors) have
+         * what matters deep inside them, long after their style sheets and
+         * menus: keep the part around it, not the start. */
+        const char *marker = NULL;
+
+        if (job->kind == JOB_DMRNET)
+            marker = u_find(body, len, "dmr-net-row");
+        else if (job->kind == JOB_YSFLIST)
+            marker = u_find(body, len, "ysfLinkHost");
+
+        if (marker != NULL) {
+            size_t at = (size_t)(marker - body);
+
+            d->offset = (at > 2000) ? at - 2000 : 0;
+            if (d->offset + HS_DIAG_BODY_MAX > len)
+                d->offset = len - HS_DIAG_BODY_MAX;
+            body += d->offset;
+            len -= d->offset;
+        }
+
+        if (len > HS_DIAG_BODY_MAX)
+            len = HS_DIAG_BODY_MAX;
         d->truncated = 1;
     }
     if (http_truncated(r))
@@ -466,7 +498,7 @@ int hs_request_summary(const hs_client *hs, char lines[][112], int max)
 {
     static const char *const title[JOB_ACTION] = {
         "Radio", "Last heard", "Status", "System", "BrandMeister", "TGIF",
-        "DMR networks"
+        "DMR networks", "YSF reflectors"
     };
     const hs_model *m = &hs->model;
     int n = 0;
@@ -478,8 +510,8 @@ int hs_request_summary(const hs_client *hs, char lines[][112], int max)
         char made[44];
 
         if (!d->have) {
-            /* The big network page is only read when the DMR tab is shown. */
-            if (k != JOB_DMRNET)
+            /* The big pages are only read when their tab is shown. */
+            if (k != JOB_DMRNET && k != JOB_YSFLIST)
                 snprintf(lines[n++], 112, "%s: not asked for yet", title[k]);
             continue;
         }
@@ -529,6 +561,14 @@ int hs_request_summary(const hs_client *hs, char lines[][112], int max)
                     snprintf(made, sizeof made, "login refused");
                 else
                     snprintf(made, sizeof made, "no network switches");
+                break;
+            case JOB_YSFLIST:
+                if (m->ysf_state == 1)
+                    snprintf(made, sizeof made, "%d reflectors", m->ysf.n);
+                else if (m->ysf_state == -2)
+                    snprintf(made, sizeof made, "login refused");
+                else
+                    snprintf(made, sizeof made, "no reflector list found");
                 break;
             default:
                 if (m->bm_state == 1)
@@ -584,8 +624,11 @@ void hs_write_diagnostics(const hs_client *hs, FILE *f)
             fprintf(f, "error: %s\n", d->err);
         if (d->head[0] != '\0')
             fprintf(f, "headers:\n%s\n", d->head);
-        fprintf(f, "body (%lu bytes%s):\n", (unsigned long)d->len,
+        fprintf(f, "body (%lu bytes%s", (unsigned long)d->len,
                 d->truncated ? ", truncated" : "");
+        if (d->offset > 0)
+            fprintf(f, ", the part from byte %lu", (unsigned long)d->offset);
+        fprintf(f, "):\n");
         if (d->body != NULL)
             fwrite(d->body, 1, d->len, f);
         fprintf(f, "\n\n");
@@ -783,6 +826,8 @@ static unsigned complete_fetch(hs_client *hs, http_state st,
                 m->bm_state = -2;
             if (job->kind == JOB_DMRNET)
                 m->dmrnet_state = -2;
+            if (job->kind == JOB_YSFLIST)
+                m->ysf_state = -2;
             return changed;
         }
 
@@ -814,6 +859,7 @@ static unsigned complete_fetch(hs_client *hs, http_state st,
             case JOB_BM:     m->bm_state = -1; changed |= HS_R_BM;     break;
             case JOB_TGIF:   m->tgif_state = -1;   changed |= HS_R_TGIF;   break;
             case JOB_DMRNET: m->dmrnet_state = -1; changed |= HS_R_DMRNET; break;
+            case JOB_YSFLIST: m->ysf_state = -1;   changed |= HS_R_YSF;    break;
             default: break;
         }
 
@@ -875,6 +921,11 @@ static unsigned complete_fetch(hs_client *hs, http_state st,
             changed |= HS_R_DMRNET;
             break;
 
+        case JOB_YSFLIST:
+            m->ysf_state = wpsd_parse_ysflist(body, len, &m->ysf) > 0 ? 1 : -1;
+            changed |= HS_R_YSF;
+            break;
+
         default:
             break;
     }
@@ -932,7 +983,7 @@ void hs_set_focus(hs_client *hs, unsigned parts)
     unsigned fresh = parts & ~hs->focus;
 
     hs->focus = parts & (HS_R_HEARD | HS_R_HW | HS_R_BM | HS_R_TGIF |
-                         HS_R_DMRNET);
+                         HS_R_DMRNET | HS_R_YSF);
 
     if (!hs->cfg.show_bm)
         fresh &= ~HS_R_BM;
