@@ -22,7 +22,9 @@ An icon bar icon opens one window with five tabs:
 
 The Menu button gives the same actions as menus (over the window, and over
 the icon bar icon); F5 refreshes (click in the window first, so it has the
-keyboard). The icon bar menu starts with **Info**, which, as in every RISC OS
+keyboard). The icon bar menu (which sits on top of the real icon bar, whatever
+its height) starts with **Info**, then **Help…** (opens the `!Help` file as a
+double-click would), and has Find hotspot…, Choices… and Quit. **Info**, as in every RISC OS
 program, is a submenu: moving the pointer onto its arrow opens the *Program
 information* window (name, purpose, author, version and build date, laid out
 like the ROM applications'), and it goes away with the menu. Settings (address, port, Admin login,

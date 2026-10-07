@@ -24,8 +24,8 @@ Getting started
 
 The Menu button over the window gives the same actions as a menu; the Menu
 button over the icon bar icon gives Info (move the pointer onto its arrow for
-the Program information window), Find hotspot, Choices and Quit. (Clicking the
-icon bar icon opens the window.)
+the Program information window), Help (this file), Find hotspot, Choices and
+Quit. (Clicking the icon bar icon opens the window.)
 F5 refreshes (click in the window first so it receives the key).
 
 If the hotspot's address changes

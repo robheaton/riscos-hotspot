@@ -62,6 +62,7 @@ typedef enum {
     UA_LINK_TO,         /* a[0] = ui_proto, arg = a recently used target */
     UA_SYS,             /* arg = system_api action, label = what to confirm */
     UA_DIAG,
+    UA_HELP,            /* open the !Help file */
     UA_QUIT
 } ui_action;
 

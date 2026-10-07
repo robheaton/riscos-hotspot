@@ -72,7 +72,7 @@ application on the NAS.
    **Resume**.
 10. Press the **Menu** mouse button over the window (Refresh, Modes, DMR, Links,
     System, View, Find hotspot…, Save diagnostics, Choices…) and over the icon
-    bar icon (Info, Find hotspot…, Choices…, Quit; clicking the icon itself opens the window) and check they
+    bar icon (Info, Help…, Find hotspot…, Choices…, Quit; clicking the icon itself opens the window; Help… opens the help file in your editor) and check they
     open and do what they say. Move the pointer onto the arrow beside Info: the
     Program information window opens beside the menu, as in other programs. After clicking in the window, **F5** refreshes.
 11. **If the hotspot's address changes**, or to try it: click **Find

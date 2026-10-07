@@ -293,6 +293,16 @@ void act_scan_results(void)
 /* Diagnostics                                                        */
 /* ------------------------------------------------------------------ */
 
+/* "Help...": runs the !Help file in the application directory, which opens
+ * in whatever the user has for Text files, as a double-click would. */
+static void help_run(void)
+{
+    os_error *error = xwimp_start_task("Filer_Run <Hotspot$Dir>.!Help", NULL);
+
+    if (error != NULL)
+        ro_error("Could not open the help file: %s", error->errmess);
+}
+
 void act_save_diagnostics(void)
 {
     char path[256];
@@ -712,6 +722,10 @@ void act_run(const ui_btn *b)
 
         case UA_DIAG:
             act_save_diagnostics();
+            break;
+
+        case UA_HELP:
+            help_run();
             break;
 
         case UA_MODE:

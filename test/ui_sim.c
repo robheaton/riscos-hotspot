@@ -1418,6 +1418,34 @@ static int s_info_window(void)
     return 1;
 }
 
+/* Help... runs the !Help file in the application directory, as double-clicking
+ * it would. */
+static int s_help(void)
+{
+    int items[2];
+
+    if (sub == 0) {
+        fw_task_command[0] = '\0';
+        fw_click(wimp_ICON_BAR, (wimp_i)7, 1200, 50, wimp_CLICK_MENU);
+        sub = 1;
+        return 0;
+    }
+
+    if (sub == 1) {
+        items[0] = fw_menu_find(fw_menu, "Help...");
+        items[1] = -1;
+        fw_menu_select(items);
+        sub = 2;
+        return 0;
+    }
+
+    CHECK(fw_task_count == 1);
+    CHECK(strcmp(fw_task_command, "Filer_Run <Hotspot$Dir>.!Help") == 0);
+    CHECK(fw_error_count == 0);
+    next();
+    return 1;
+}
+
 /* ---- Text the desktop cannot show, and open requests --------------- */
 
 /* Error box text with a new line or a colour code in it would be cut short by
@@ -1955,15 +1983,17 @@ static int s_iconbar_menu(void)
     root = fw_menu;
     CHECK(root != NULL);
     CHECK(strcmp(root->title_data.text, "Hotspot") == 0);
-    CHECK(fw_menu_item_count(root) == 4);
+    CHECK(fw_menu_item_count(root) == 5);
     CHECK(fw_menu_find(root, "Info") == 0);
+    CHECK(fw_menu_find(root, "Help...") == 1);
     CHECK(fw_menu_find(root, "Show window") < 0);   /* clicking the icon does it */
-    CHECK(fw_menu_find(root, "Find hotspot...") == 1);
-    CHECK(fw_menu_find(root, "Choices...") == 2);
-    CHECK(fw_menu_find(root, "Quit") == 3);
+    CHECK(fw_menu_find(root, "Find hotspot...") == 2);
+    CHECK(fw_menu_find(root, "Choices...") == 3);
+    CHECK(fw_menu_find(root, "Quit") == 4);
     /* The menu opens above the icon bar: its items end at the icon bar's
-     * top edge, the title bar sitting above the position given. */
-    CHECK(fw_menu_y == 96 + 4 * 44 + 24);
+     * real top edge (132 high on this Wimp, not the 96 of the Style Guide),
+     * the title bar sitting above the position given. */
+    CHECK(fw_menu_y == FW_ICONBAR_HEIGHT + 5 * 44 + 24);
     next();
     return 1;
 }
@@ -2221,7 +2251,7 @@ static const step_fn steps[] = {
     s_dstar_link, s_dstar_linked,
     s_ysf_unlink, s_dstar_unlink, s_ysf_relink_recent, s_dstar_relink_recent,
     s_system_tab, s_reboot_cancel, s_restart, s_reboot_ok, s_diagnostics,
-    s_info_window, s_error_text_plain, s_open_requests_leave_extent,
+    s_info_window, s_help, s_error_text_plain, s_open_requests_leave_extent,
     s_window_menu, s_window_menu_views, s_menu_heard_shown,
     s_close_window,
     s_menu_choices, s_choices_escape, s_choices_cancelled,

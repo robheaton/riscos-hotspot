@@ -113,6 +113,9 @@ extern wimp_w       fw_caret_window;    /* who the keyboard goes to (0: nobody) 
 extern int          fw_keys_lost;       /* keys sent with no caret owner */
 extern int          fw_api_violations;  /* calls the real Wimp would mishandle */
 extern int          fw_set_extent_count;/* Wimp_SetExtent calls so far */
+extern char         fw_task_command[256];/* the last Wimp_StartTask command */
+extern int          fw_task_count;
+#define FW_ICONBAR_HEIGHT 132           /* the real Wimp's icon bar, not the PRM's 96 */
 extern int          fw_process_key_count;
 extern int          fw_poll_count;
 

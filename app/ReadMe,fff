@@ -61,8 +61,10 @@ Step by step
 9. Press the Menu button over the window: Refresh, Modes, DMR, Links,
    System, View, Find hotspot..., Save diagnostics, Choices.
 
-10. Press the Menu button over the icon bar icon: Info, Find hotspot...,
-    Choices..., Quit (clicking the icon itself opens the window). Move the
+10. Press the Menu button over the icon bar icon: Info, Help..., Find
+    hotspot..., Choices..., Quit (clicking the icon itself opens the window;
+    Help... opens this kind of text file in your editor). The menu should sit
+    exactly on top of the icon bar, not overlap it. Move the
     pointer onto the arrow beside Info: the "Program information" window
     opens beside the menu (Name, Purpose, Author, Version), as in other
     programs, and goes away with the menu.

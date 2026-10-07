@@ -207,9 +207,25 @@ static ui_btn simple(ui_action action, const char *arg, int a0, int a1,
 /* The icon bar menu                                                  */
 /* ------------------------------------------------------------------ */
 
+/* The top edge of the icon bar. The Wimp's bar is not always the 96 units the
+ * Style Guide gives (it is 132 on this Wimp): a menu opened from the bar sits
+ * on top of the real one, and the 96 only stands in if it cannot be read. */
+static int iconbar_top(void)
+{
+    wimp_window_state st;
+
+    memset(&st, 0, sizeof st);
+    st.w = wimp_ICON_BAR;
+    if (xwimp_get_window_state(&st) == NULL && st.visible.y1 > 0 &&
+        st.visible.y1 < 400)
+        return st.visible.y1;
+
+    return ICONBAR_H;
+}
+
 static menu *build_iconbar(void)
 {
-    menu *mn = menu_new(APP_NAME, 4);
+    menu *mn = menu_new(APP_NAME, 5);
     ui_btn b;
 
     if (mn == NULL)
@@ -219,12 +235,14 @@ static menu *build_iconbar(void)
      * the icon opens the main window, so the menu has no entry for that. */
     menu_item(mn, 0, "Info", NULL, info_window() == 0, 0, 0);
     menu_set_window(mn, 0, info_window());
+    b = simple(UA_HELP, NULL, 0, 0, 0);
+    menu_item(mn, 1, "Help...", &b, 0, 0, 0);
     b = simple(UA_FIND, NULL, 0, 0, 0);
-    menu_item(mn, 1, "Find hotspot...", &b, 0, 0, 0);
+    menu_item(mn, 2, "Find hotspot...", &b, 0, 0, 0);
     b = simple(UA_CHOICES, NULL, 0, 0, 0);
-    menu_item(mn, 2, "Choices...", &b, 0, 0, 1);
+    menu_item(mn, 3, "Choices...", &b, 0, 0, 1);
     b = simple(UA_QUIT, NULL, 0, 0, 0);
-    menu_item(mn, 3, "Quit", &b, 0, 0, 0);
+    menu_item(mn, 4, "Quit", &b, 0, 0, 0);
     menu_finish(mn);
 
     return mn;
@@ -523,7 +541,7 @@ void menu_open_iconbar(const wimp_pointer *p)
     menu *mn = build_iconbar();
 
     if (mn != NULL)
-        show(mn, p->pos.x - 64, ICONBAR_H + menu_height(mn));
+        show(mn, p->pos.x - 64, iconbar_top() + menu_height(mn));
 }
 
 void menu_open_window(const wimp_pointer *p)

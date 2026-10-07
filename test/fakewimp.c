@@ -55,6 +55,8 @@ wimp_w       fw_caret_window;
 int          fw_keys_lost;
 int          fw_api_violations;
 int          fw_set_extent_count;
+char         fw_task_command[256];
+int          fw_task_count;
 int          fw_caret_icon = -1;
 int          fw_process_key_count;
 int          fw_poll_count;
@@ -84,6 +86,8 @@ void fw_reset(void)
     fw_keys_lost = 0;
     fw_api_violations = 0;
     fw_set_extent_count = 0;
+    fw_task_command[0] = '\0';
+    fw_task_count = 0;
     fw_process_key_count = 0;
     fw_poll_count = 0;
     memset(&fw_pointer, 0, sizeof fw_pointer);
@@ -402,7 +406,17 @@ os_error *xwimp_close_window(wimp_w w)
 
 os_error *xwimp_get_window_state(wimp_window_state *state)
 {
-    fw_window *fw = fw_window_by_handle(state->w);
+    fw_window *fw;
+
+    /* Handle -2 is the icon bar: along the bottom of the screen. */
+    if (state->w == wimp_ICON_BAR) {
+        memset(&state->visible, 0, sizeof state->visible);
+        state->visible.x1 = 2560;
+        state->visible.y1 = FW_ICONBAR_HEIGHT;
+        return NULL;
+    }
+
+    fw = fw_window_by_handle(state->w);
 
     if (fw == NULL) {
         static os_error err = { 3, "fakewimp: bad window handle" };
@@ -932,6 +946,17 @@ os_error *xos_gs_trans(char const *s, char *buffer, int size, int *used,
         *used = (int)n;
     if (psr != NULL)
         *psr = 0;
+
+    return NULL;
+}
+
+os_error *xwimp_start_task(char const *command, wimp_t *task)
+{
+    snprintf(fw_task_command, sizeof fw_task_command, "%s", command);
+    fw_task_count++;
+
+    if (task != NULL)
+        *task = (wimp_t)(intptr_t)4343;
 
     return NULL;
 }

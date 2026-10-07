@@ -36,6 +36,11 @@ start_server() {      # start_server <script> [args...] -> echoes the port
     return 1
 }
 
+echo "== the application's own files"
+for f in '!Run,feb' '!Boot,feb' '!Help,fff' 'Choices,fff'; do
+    [ -f "$root/app/!Hotspot/$f" ] || { echo "missing app/!Hotspot/$f"; status=1; }
+done
+
 echo "== fixtures"
 rm -rf "$build/fixtures"
 python3 "$root/test/mock_wpsd.py" --dump-fixtures "$build/fixtures" || exit 1
